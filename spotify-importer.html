@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Spotify Importer</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="styles.css" />
+
+	</head>
+	<body>
+		<!-- ── Modal ──────────────────────────────────────────────────────────────── -->
+		<div class="modal-overlay" id="modal-overlay">
+			<div class="modal">
+				<div class="modal-top">
+					<div class="modal-title">Как получить Spotify Client ID</div>
+					<button class="modal-close" id="modal-close">✕</button>
+				</div>
+				<p class="modal-sub">Займёт около 3 минут</p>
+
+				<div class="notice">⚠ Для работы необходим аккаунт Spotify Premium.</div>
+
+				<div class="steps">
+					<div class="step">
+						<div class="step-num">1</div>
+						<div class="step-body">
+							<div class="step-title">Откройте Spotify Dashboard</div>
+							<div class="step-desc">
+								Перейдите на
+								<a href="https://developer.spotify.com/dashboard" target="_blank"
+									>developer.spotify.com/dashboard</a
+								>
+								и войдите в свой аккаунт Spotify.
+							</div>
+						</div>
+					</div>
+					<div class="step">
+						<div class="step-num">2</div>
+						<div class="step-body">
+							<div class="step-title">Создайте приложение</div>
+							<div class="step-desc">
+								Нажмите <strong>Create app</strong>. Заполните любые название и описание —
+								содержание не важно.
+							</div>
+						</div>
+					</div>
+					<div class="step">
+						<div class="step-num">3</div>
+						<div class="step-body">
+							<div class="step-title">Укажите Redirect URI</div>
+							<div class="step-desc">
+								В поле <strong>Redirect URI</strong> вставьте адрес этой страницы:<br />
+								<code id="current-url"></code>
+							</div>
+						</div>
+					</div>
+					<div class="step">
+						<div class="step-num">4</div>
+						<div class="step-body">
+							<div class="step-title">Включите Web API</div>
+							<div class="step-desc">
+								Поставьте галочку напротив <strong>Web API</strong>. Нажмите <strong>Save</strong>.
+							</div>
+						</div>
+					</div>
+					<div class="step">
+						<div class="step-num">5</div>
+						<div class="step-body">
+							<div class="step-title">Добавьте себя как пользователя</div>
+							<div class="step-desc">
+								Перейдите на вкладку <strong>User Management</strong> → введите имя и email от
+								вашего Spotify-аккаунта и добавьте себя.
+							</div>
+						</div>
+					</div>
+					<div class="step">
+						<div class="step-num">6</div>
+						<div class="step-body">
+							<div class="step-title">Скопируйте Client ID</div>
+							<div class="step-desc">
+								Вернитесь на вкладку <strong>Settings</strong> и скопируйте значение поля
+								<strong>Client ID</strong>. Вставьте его в поле на этой странице.
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- ── Card ───────────────────────────────────────────────────────────────── -->
+		<div class="card">
+			<div class="header">
+				<svg class="logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+					<circle cx="12" cy="12" r="12" fill="#1db954" />
+					<path
+						d="M17.5 10.3c-3.1-1.8-8.2-2-11.1-1.1-.5.1-.9-.2-1-.6-.1-.5.2-.9.6-1 3.3-1 8.8-.8 12.3 1.2.4.2.6.8.3 1.2-.2.4-.7.5-1.1.3zm-.1 2.8c-.2.4-.7.5-1 .3-2.6-1.6-6.5-2-9.5-1.1-.4.1-.8-.1-.9-.5-.1-.4.1-.8.5-.9 3.5-1.1 7.8-.5 10.7 1.3.3.2.4.6.2.9zm-1.2 2.7c-.2.3-.5.4-.8.2-2.2-1.4-5.1-1.7-8.4-.9-.3.1-.6-.1-.7-.4-.1-.3.1-.6.4-.7 3.6-.8 6.8-.5 9.3 1 .3.2.3.5.2.8z"
+						fill="white"
+					/>
+				</svg>
+				<div style="display: flex; flex-direction: column; gap: 4px">
+					<h1>Spotify Importer by <span style="color: #1db954">Egor Lok1e</span></h1>
+				</div>
+			</div>
+
+			<!-- Step 1 -->
+			<div id="step-auth">
+				<div class="field">
+					<div class="field-header">
+						<label>Spotify Client ID</label>
+						<button class="help-btn" id="btn-help">Где взять Client ID?</button>
+					</div>
+					<input type="text" id="client-id" placeholder="Вставьте Client ID" />
+				</div>
+				<div class="btn-group">
+					<button class="primary" id="btn-auth">Подключить Spotify</button>
+				</div>
+			</div>
+
+			<!-- Step 2 -->
+			<div id="step-import" style="display: none">
+				<div class="field">
+					<div class="field-header"><label>Название плейлиста</label></div>
+					<input type="text" id="playlist-name" placeholder="Мой плейлист" />
+				</div>
+				<div class="field" style="margin-bottom: 0">
+					<div class="field-header"><label>Файл треков (.txt)</label></div>
+					<div class="file-drop" id="drop-zone">
+						Перетащите файл сюда или нажмите для выбора
+						<input type="file" id="file-input" accept=".txt" />
+					</div>
+				</div>
+				<div class="btn-group">
+					<button class="primary" id="btn-start" disabled>Начать импорт</button>
+					<button class="warn" id="btn-resume" style="display: none">
+						↺ Продолжить предыдущий импорт
+					</button>
+					<button id="btn-logout">Отключиться</button>
+				</div>
+			</div>
+
+			<div class="progress" id="progress">
+				<div class="progress-meta">
+					<span class="progress-label">Прогресс</span>
+					<span id="progress-text">0 / 0</span>
+				</div>
+				<div class="bar-wrap"><div class="bar" id="bar"></div></div>
+			</div>
+
+			<div class="log" id="log"></div>
+		</div>
+
+		<script src="app.js"></script>
+	</body>
+</html>

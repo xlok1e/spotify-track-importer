@@ -1,7 +1,12 @@
 const SCOPES = "playlist-modify-public playlist-modify-private";
 const STORAGE_KEY = "spotify_import_state";
-const MAX_TRACKS = 10000;
+const MAX_TRACKS = 10_000;
 const SEARCH_CONCURRENCY = 1;
+const PAUSE_EVERY = 30;
+const PAUSE_DURATION = 12_000;
+
+let baseDelay = 600;
+const jitter = () => baseDelay + Math.random() * 200;
 
 /** @type {string | null} */
 let accessToken = null;
@@ -120,7 +125,8 @@ const spotifyFetch = async (endpoint, opts = {}, attempt = 0) => {
 		},
 	});
 	if (res.status === 429 && attempt < 5) {
-		const wait = parseInt(res.headers.get("Retry-After") || "5") * 1000;
+		const wait = (parseInt(res.headers.get("Retry-After") || "5") + 5) * 1000;
+		baseDelay = Math.min(baseDelay * 1.5, 2000); // back off globally on 429
 		logLine(`Rate limit → ждём ${wait / 1000}с...`, "info");
 		await sleep(wait);
 		return spotifyFetch(endpoint, opts, attempt + 1);
@@ -144,23 +150,12 @@ const cleanLine = (line) =>
 		.replace(/\s{2,}/g, " ")
 		.trim();
 
-/** @param {string} line */
-const toFieldQuery = (line) => {
-	const idx = line.indexOf(" - ");
-	if (idx === -1) return line;
-	return `track:${line.slice(idx + 3).trim()} artist:${line.slice(0, idx).trim()}`;
-};
-
 /** @param {string} line @returns {Promise<string | null>} */
 const searchTrack = async (line) => {
 	const cleaned = cleanLine(line);
-	const attempt = async (/** @type {string} */ q) => {
-		const res = await spotifyFetch(`/search?q=${encodeURIComponent(q)}&type=track&limit=1`);
-		const data = await res.json();
-		return data.tracks?.items?.[0]?.uri ?? null;
-	};
-	const uri = await attempt(toFieldQuery(cleaned));
-	return uri ?? attempt(cleaned);
+	const res = await spotifyFetch(`/search?q=${encodeURIComponent(cleaned)}&type=track&limit=1`);
+	const data = await res.json();
+	return data.tracks?.items?.[0]?.uri ?? null;
 };
 
 // ─── Playlist creation ─────────────────────────────────────────────────────
@@ -397,7 +392,15 @@ const runImport = async (state) => {
 		state.nextIndex = Math.min(i + SEARCH_CONCURRENCY, state.tracks.length);
 		setProgress(state.nextIndex, state.tracks.length);
 		save();
-		await sleep(500);
+
+		// pause every PAUSE_EVERY tracks to stay within rolling 30s window
+		if (state.nextIndex % PAUSE_EVERY === 0 && state.nextIndex < state.tracks.length) {
+			logLine(`Пауза ${PAUSE_DURATION / 1000}с каждые ${PAUSE_EVERY} треков...`, "info");
+			await sleep(PAUSE_DURATION);
+			baseDelay = Math.max(baseDelay * 0.9, 600); // gradually relax after quiet period
+		} else {
+			await sleep(jitter());
+		}
 	}
 
 	const totalBatches = Math.ceil(state.foundUris.length / 100);

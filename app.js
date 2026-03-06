@@ -1,7 +1,7 @@
 const SCOPES = "playlist-modify-public playlist-modify-private";
 const STORAGE_KEY = "spotify_import_state";
 const MAX_TRACKS = 10000;
-const SEARCH_CONCURRENCY = 2;
+const SEARCH_CONCURRENCY = 1;
 
 /** @type {string | null} */
 let accessToken = null;
@@ -397,7 +397,7 @@ const runImport = async (state) => {
 		state.nextIndex = Math.min(i + SEARCH_CONCURRENCY, state.tracks.length);
 		setProgress(state.nextIndex, state.tracks.length);
 		save();
-		await sleep(150);
+		await sleep(500);
 	}
 
 	const totalBatches = Math.ceil(state.foundUris.length / 100);
@@ -426,7 +426,7 @@ const runImport = async (state) => {
 		}
 		if (!success) logLine(`⚠ Батч ${batchNum}/${totalBatches} не добавлен`, "err");
 		setProgress(batchNum, totalBatches, `Батч ${batchNum} / ${totalBatches}`);
-		await sleep(300);
+		await sleep(500);
 	}
 
 	state.completed = true;

@@ -2,12 +2,8 @@ const SCOPES = "playlist-modify-public playlist-modify-private";
 const STORAGE_KEY = "spotify_import_state";
 const MAX_TRACKS = 10000;
 const SEARCH_CONCURRENCY = 1;
-const PAUSE_EVERY = 30;
-const PAUSE_DURATION = 15000;
 const FLUSH_EVERY = 30;
-
-let baseDelay = 2000;
-const jitter = () => baseDelay + Math.random() * 200;
+const TRACK_DELAY = 2000;
 
 /** @type {string | null} */
 let accessToken = null;
@@ -136,7 +132,6 @@ const spotifyFetch = async (endpoint, opts = {}, attempt = 0) => {
 	if (res.status === 429) {
 		if (attempt >= 5) throw new RateLimitError();
 		const wait = (parseInt(res.headers.get("Retry-After") || "5") + 5) * 1000;
-		baseDelay = Math.min(baseDelay * 1.5, 4000);
 		logLine(`Rate limit → ждём ${wait / 1000}с...`, "info");
 		await sleep(wait);
 		return spotifyFetch(endpoint, opts, attempt + 1);
@@ -265,8 +260,10 @@ document.getElementById("btn-resume").addEventListener("click", async () => {
 		document.getElementById("drop-zone").classList.add("loaded");
 		document.getElementById("btn-resume").style.display = "none";
 		document.getElementById("btn-start").disabled = true;
+		logEl.innerHTML = "";
 		logEl.classList.add("visible");
 		progressEl.classList.add("visible");
+		setProgress(state.nextIndex, state.tracks.length);
 		await runImport(state);
 	} catch (e) {
 		logLine(`Ошибка восстановления: ${e.message}`, "err");
@@ -454,13 +451,7 @@ const runImport = async (state) => {
 				await flushToPlaylist();
 			}
 
-			if (state.nextIndex % PAUSE_EVERY === 0 && state.nextIndex < state.tracks.length) {
-				logLine(`Пауза ${PAUSE_DURATION / 1000}с каждые ${PAUSE_EVERY} треков...`, "info");
-				await sleep(PAUSE_DURATION);
-				baseDelay = Math.max(baseDelay * 0.9, 2000);
-			} else {
-				await sleep(jitter());
-			}
+			await sleep(TRACK_DELAY);
 		}
 
 		// Flush any remaining tracks
@@ -469,11 +460,10 @@ const runImport = async (state) => {
 		if (e instanceof RateLimitError) {
 			save();
 			logLine("", "info");
-			logLine("Вы достигли суточного лимита запросов Spotify.", "err");
+			logLine("⛔ Вы достигли суточного лимита запросов Spotify.", "err");
 			logLine(`Уже перенесено ${state.addedCount} треков в плейлист.`, "info");
 			logLine("Прогресс сохранён — возвращайтесь через 24 часа, чтобы продолжить.", "info");
 			document.getElementById("btn-resume").style.display = "block";
-			document.getElementById("btn-start").disabled = false;
 			return;
 		}
 		throw e;

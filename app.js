@@ -1,9 +1,9 @@
 const SCOPES = "playlist-modify-public playlist-modify-private";
 const STORAGE_KEY = "spotify_import_state";
-const MAX_TRACKS = 10_000;
+const MAX_TRACKS = 10000;
 const SEARCH_CONCURRENCY = 1;
 const PAUSE_EVERY = 30;
-const PAUSE_DURATION = 12_000;
+const PAUSE_DURATION = 17000;
 
 let baseDelay = 600;
 const jitter = () => baseDelay + Math.random() * 200;
